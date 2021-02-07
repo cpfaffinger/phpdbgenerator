@@ -89,6 +89,10 @@ function transposeSqlType(string $typeFlag)
 	)
 		$typeFlag = "string";
 
+	//all of these will become int
+	if ($typeFlag == "bigint")
+		$typeFlag = "int";
+
 	//all of these will become double
 	if ($typeFlag == "decimal")
 		$typeFlag = "double";
