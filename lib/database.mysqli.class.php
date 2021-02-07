@@ -4,7 +4,7 @@ class database_mysqli
 {
 	private $link;
 
-	function __construct($host, $database, $user, $password)
+	function __construct(string $host, string $user, string $password, string $database)
 	{
 		$this->link = new mysqli($host, $user, $password, $database);
 
@@ -25,12 +25,12 @@ class database_mysqli
 	/**
 	 * @return \mysqli
 	 */
-	private function getLink()
+	public function getLink()
 	{
 		return $this->link;
 	}
 
-	function close()
+	public function close()
 	{
 		if ($this->link)
 		{
@@ -38,7 +38,7 @@ class database_mysqli
 		}
 	}
 
-	function query($_q, bool $handleError = true)
+	public function query($_q, bool $handleError = true)
 	{
 		$query = $this->getLink()->query($_q);
 		if (!$query)
@@ -50,31 +50,25 @@ class database_mysqli
 		return $query;
 	}
 
-	function handleError($query, $errorMessage)
+	public function handleError($query, $errorMessage)
 	{
 
-		log::log("SQL_EXCEPTION", ["query" => $query, "message" => $errorMessage], 5);
-
-		$n = new \pulse\pulsemail();
-		$n->setSubject(PAGE_NAME." - SQL Exception");
-		$n->setText("<h4>".$errorMessage."</h4><br />".
-			"<b>Query</b>: <br /><pre>".$query."</pre><br /><br />".
-			"<b>Error</b>: <br /><pre>".$errorMessage."</pre><br /><br />".
-			"<br />".
-			"Server: <br /><pre>".print_r($_SERVER, true)."</pre><br /><br />".
-			"Session: <br /><pre>".print_r($_SESSION, true)."</pre><br /><br />".
-			"Post: <br /><pre>".print_r($_POST, true)."</pre><br /><br />".
-			"Get: <br /><pre>".print_r($_GET, true)."</pre><br /><br />".
-			"");
-		$n->setRecipient("cp@pulseone.at", "Christopher Pfaffinger");
-		$n->send();
-
-		throw new \RuntimeException("Database Error. Please call Support!");
+		echo PHP_EOL;
+		echo "[FATAL] DATASBASE".PHP_EOL;
+		echo "[SQL_EXCAPTION]".PHP_EOL;
+		
+		echo "**QUERY**".PHP_EOL;
+		echo $query.PHP_EOL;
+		echo PHP_EOL;
+		echo "**ERRORMESSAGE**".PHP_EOL;
+		echo $errorMessage.PHP_EOL;
+		echo PHP_EOL;
+		
+		die();
 	}
 
-	function get($_q, $single = false)
+	public function get($_q, $single = false)
 	{
-//		$start = microtime(true);
 
 		$result = $this->getLink()->query($_q);
 		if ($result)
@@ -90,7 +84,6 @@ class database_mysqli
 				$r[] = $row;
 			}
 			$result->free();
-//			sl("QUERY ".str_replace(array("\r\n","\r","\n","\t"), " ", $_query)." TOOK ".(microtime(true)-$start)."ms");
 			return $r;
 		}
 		else
@@ -100,7 +93,7 @@ class database_mysqli
 		}
 	}
 
-	function filter($_t)
+	public function filter($_t)
 	{
 		return $this->getLink()->real_escape_string($_t);
 	}
@@ -110,7 +103,7 @@ class database_mysqli
 	 *
 	 * @return int
 	 */
-	function count($_q)
+	public function count($_q)
 	{
 		if ($result = $this->getLink()->query($_q))
 		{
@@ -125,7 +118,7 @@ class database_mysqli
 	 *
 	 * @return string
 	 */
-	function quotedStringOrNull(string $s)
+	public function quotedStringOrNull(string $s)
 	{
 		if (strlen(trim($s)) <1)
 			return "NULL";
@@ -138,7 +131,7 @@ class database_mysqli
 	 *
 	 * @return int|string
 	 */
-	function intOrNull($s)
+	public function intOrNull($s)
 	{
 		if (!is_numeric($s))
 			return "NULL";

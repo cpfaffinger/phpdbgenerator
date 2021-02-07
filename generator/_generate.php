@@ -1,6 +1,15 @@
 <?php
 require_once(__DIR__ . "/../lib/core.inc.php");
 
+if (count($argv) != 5)
+	die("INVALID ARGUMENTS: host user pwd database");
+print_r($argv);
+
+
+//database
+$database = new database_mysqli($argv[1], $argv[2], $argv[3], $argv[4]);
+
+
 if (!is_dir(__DIR__.'/generated'))
 	if (!mkdir(__DIR__.'/generated') && !is_dir(__DIR__.'/generated')) {
 		throw new \RuntimeException(sprintf('Directory "%s" was not created', 'generated'));
@@ -27,7 +36,7 @@ if (!is_dir(__DIR__.'/generated/controller'))
 	}
 
 $tableNames = [];
-$allTables = database::getLink()->get("SHOW TABLES;");
+$allTables = $database->get("SHOW TABLES;");
 foreach ($allTables as $table) {
 	$tableNames[] = array_values($table)[0];
 	foreach ($tableNames as $tableName) {
@@ -36,25 +45,25 @@ foreach ($allTables as $table) {
 		$path = __DIR__."/generated/dbschema/$tableName.class.php";
 		if (file_exists($path))
 			unlink($path);
-		file_put_contents($path, generateDBSchema($tableName));
+		file_put_contents($path, generateDBSchema($database, $tableName));
 
 		echo "rendering \dbmodel\\" . $tableName . PHP_EOL;
 		$path = __DIR__."/generated/dbmodel/$tableName.class.php";
 		if (file_exists($path))
 			unlink($path);
-		file_put_contents($path, generateDbModel($tableName));
+		file_put_contents($path, generateDbModel($database, $tableName));
 
 		echo "rendering \distrib\\" . $tableName . PHP_EOL;
 		$path = __DIR__."/generated/distrib/$tableName.class.php";
 		if (file_exists($path))
 			unlink($path);
-		file_put_contents($path, generateDistrib($tableName));
+		file_put_contents($path, generateDistrib($database, $tableName));
 
 		echo "rendering \controller\\" . $tableName . PHP_EOL;
 		$path = __DIR__."/generated/controller/$tableName.class.php";
 		if (file_exists($path))
 			unlink($path);
-		file_put_contents($path, generateController($tableName));
+		file_put_contents($path, generateController($database, $tableName));
 
 	}
 }
@@ -78,10 +87,10 @@ function transposeSqlType(string $typeFlag)
 	return $typeFlag;
 }
 
-function generateDBSchema($table)
+function generateDBSchema($database, $table)
 {
 
-	$fields = database::getLink()->get("DESC `" . $table . "`");
+	$fields = $database->get("DESC `" . $table . "`");
 
 	$allFieldsColl = [];
 	foreach ($fields as $f)
@@ -122,9 +131,9 @@ function generateDBSchema($table)
 	return implode(PHP_EOL, $s);
 }
 
-function generateDbModel($table)
+function generateDbModel($database, $table)
 {
-	$fields = database::getLink()->get("DESC `" . $table . "`");
+	$fields = $database->get("DESC `" . $table . "`");
 	$firstFieldName = $fields[0]['Field'];
 
 	$hasGuidField = false;
@@ -180,8 +189,8 @@ function generateDbModel($table)
 	if ($hasGuidField) {
 
 		$s[] = '    public static function resolveGuidToId(string $guid) :int {';
-		$s[] = '       $_q = "SELECT ' . $firstFieldName . ' FROM `' . $table . '` WHERE guid = \"".\database::getLink()->filter($guid)."\" LIMIT 1";';
-		$s[] = '       $t = \database::getLink()->get($_q, true);';
+		$s[] = '       $_q = "SELECT ' . $firstFieldName . ' FROM `' . $table . '` WHERE guid = \"".\$database->filter($guid)."\" LIMIT 1";';
+		$s[] = '       $t = \$database->get($_q, true);';
 		$s[] = '       return (int)$t[\'' . $firstFieldName . '\'];';
 		$s[] = '    }';
 		$s[] = '';
@@ -201,8 +210,8 @@ function generateDbModel($table)
 	$s[] = '           return false;';
 	$s[] = '';
 
-	$s[] = '        $_q = "SELECT ' . implode(", ", $allFieldsCollWithSqlTerminators) . ' FROM `' . $table . '` WHERE `' . $firstFieldName . '` = ".\database::getLink()->filter($this->' . $firstFieldName . ')." LIMIT 1";';
-	$s[] = '        $t = \database::getLink()->get($_q, true);';
+	$s[] = '        $_q = "SELECT ' . implode(", ", $allFieldsCollWithSqlTerminators) . ' FROM `' . $table . '` WHERE `' . $firstFieldName . '` = ".\$database->filter($this->' . $firstFieldName . ')." LIMIT 1";';
+	$s[] = '        $t = \$database->get($_q, true);';
 	$s[] = '';
 
 	$s[] = '        if (empty($t))';
@@ -235,9 +244,9 @@ function generateDbModel($table)
 			$s[] = "            case '$field':";
 
 		if ($type == "string")
-			$s[] = '                $value = "\"".\database::getLink()->filter((' . $type . ')$value)."\"";';
+			$s[] = '                $value = "\"".\$database->filter((' . $type . ')$value)."\"";';
 		else
-			$s[] = '                $value = \database::getLink()->filter((' . $type . ')$value);';
+			$s[] = '                $value = \$database->filter((' . $type . ')$value);';
 
 		$s[] = '                break;';
 		$s[] = '';
@@ -248,7 +257,7 @@ function generateDbModel($table)
 	$s[] = '        }';
 
 	$s[] = '        $_q = "UPDATE `' . $table . '` SET `$key` = $value WHERE guid = \"$this->guid\";";';
-	$s[] = '        return \database::getLink()->query($_q);';
+	$s[] = '        return \$database->query($_q);';
 	$s[] = '    }';
 	$s[] = '';
 	//END FUNCTION spawn
@@ -268,9 +277,9 @@ function generateDbModel($table)
 	return implode(PHP_EOL, $s);
 }
 
-function generateDistrib($table)
+function generateDistrib($database, $table)
 {
-	$fields = database::getLink()->get("DESC `" . $table . "`");
+	$fields = $database->get("DESC `" . $table . "`");
 	$firstFieldName = $fields[0]['Field'];
 
 	$hasGuidField = false;
@@ -308,9 +317,9 @@ function generateDistrib($table)
 	return implode(PHP_EOL, $s);
 }
 
-function generateController($table)
+function generateController($database, $table)
 {
-	$fields = database::getLink()->get("DESC `" . $table . "`");
+	$fields = $database->get("DESC `" . $table . "`");
 	$firstFieldName = $fields[0]['Field'];
 
 	$s = [];
@@ -325,7 +334,7 @@ function generateController($table)
 	$s[] = '	public static function getAll(): array';
 	$s[] = '	{';
 	$s[] = '		$_q = "SELECT '.$firstFieldName.' FROM `'.$table.'`;";';
-	$s[] = '		$t = \database::getLink()->get($_q);';
+	$s[] = '		$t = \$database->get($_q);';
 	$s[] = '		$r = [];';
 	$s[] = '		foreach ($t as $u)';
 	$s[] = '			$r[] = new \\distrib\\'.$table.'((int)$u["'.$firstFieldName.'"]);';
