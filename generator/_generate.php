@@ -197,9 +197,9 @@ function generateDbModel($database, $table)
 	//BEGIN FUNCTION resolveGuidToId
 	if ($hasGuidField) {
 
-		$s[] = '    public static function resolveGuidToId(string $guid) :int {';
-		$s[] = '       $_q = "SELECT ' . $firstFieldName . ' FROM `' . $table . '` WHERE guid = \"".\$database->filter($guid)."\" LIMIT 1";';
-		$s[] = '       $t = \$database->get($_q, true);';
+		$s[] = '    public static function resolveGuidToId(string $guid): int {';
+		$s[] = '       $_q = "SELECT ' . $firstFieldName . ' FROM `' . $table . '` WHERE guid = \"".\Database::filter($guid)."\" LIMIT 1";';
+		$s[] = '       $t = \Database::get($_q, true);';
 		$s[] = '       return (int)$t[\'' . $firstFieldName . '\'];';
 		$s[] = '    }';
 		$s[] = '';
@@ -207,20 +207,20 @@ function generateDbModel($database, $table)
 	//END FUNCTION resolveGuidToId
 
 	//BEGIN FUNCTION isValid
-	$s[] = '    public function isValid() :bool {';
+	$s[] = '    public function isValid(): bool {';
 	$s[] = '    	return (bool)$this->' . $firstFieldName . ';';
 	$s[] = '    }';
 	$s[] = '';
 	//END FUNCTION isValid
 
 	//BEGIN FUNCTION spawn
-	$s[] = '    public function spawn() :bool {';
+	$s[] = '    public function spawn(): bool {';
 	$s[] = '        if (!$this->isValid())';
 	$s[] = '           return false;';
 	$s[] = '';
 
-	$s[] = '        $_q = "SELECT ' . implode(", ", $allFieldsCollWithSqlTerminators) . ' FROM `' . $table . '` WHERE `' . $firstFieldName . '` = ".\$database->filter($this->' . $firstFieldName . ')." LIMIT 1";';
-	$s[] = '        $t = \$database->get($_q, true);';
+	$s[] = '        $_q = "SELECT ' . implode(", ", $allFieldsCollWithSqlTerminators) . ' FROM `' . $table . '` WHERE `' . $firstFieldName . '` = ".\Database::filter($this->' . $firstFieldName . ')." LIMIT 1";';
+	$s[] = '        $t = \Database::get($_q, true);';
 	$s[] = '';
 
 	$s[] = '        if (empty($t))';
@@ -241,7 +241,7 @@ function generateDbModel($database, $table)
 	$s[] = '}';
 	$s[] = '';
 
-	$s[] = '    public function update($key, $value) :bool {';
+	$s[] = '    public function update($key, $value): bool {';
 	$s[] = '        if (!$this->isUpdateAllowedKey($key))';
 	$s[] = '            return false;';
 	$s[] = '';
@@ -253,9 +253,9 @@ function generateDbModel($database, $table)
 			$s[] = "            case '$field':";
 
 		if ($type == "string")
-			$s[] = '                $value = "\"".\$database->filter((' . $type . ')$value)."\"";';
+			$s[] = '                $value = "\"".\Database::filter((' . $type . ')$value)."\"";';
 		else
-			$s[] = '                $value = \$database->filter((' . $type . ')$value);';
+			$s[] = '                $value = \Database::filter((' . $type . ')$value);';
 
 		$s[] = '                break;';
 		$s[] = '';
@@ -266,7 +266,7 @@ function generateDbModel($database, $table)
 	$s[] = '        }';
 
 	$s[] = '        $_q = "UPDATE `' . $table . '` SET `$key` = $value WHERE guid = \"$this->guid\";";';
-	$s[] = '        return \$database->query($_q);';
+	$s[] = '        return \Database::query($_q);';
 	$s[] = '    }';
 	$s[] = '';
 	//END FUNCTION spawn
@@ -343,7 +343,7 @@ function generateController($database, $table)
 	$s[] = '	public static function getAll(): array';
 	$s[] = '	{';
 	$s[] = '		$_q = "SELECT '.$firstFieldName.' FROM `'.$table.'`;";';
-	$s[] = '		$t = \$database->get($_q);';
+	$s[] = '		$t = \Database::get($_q);';
 	$s[] = '		$r = [];';
 	$s[] = '		foreach ($t as $u)';
 	$s[] = '			$r[] = new \\distrib\\'.$table.'((int)$u["'.$firstFieldName.'"]);';
