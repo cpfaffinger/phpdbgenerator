@@ -15,25 +15,34 @@ if (!is_dir(__DIR__.'/generated'))
 		throw new \RuntimeException(sprintf('Directory "%s" was not created', 'generated'));
 	}
 
-if (!is_dir(__DIR__.'/generated/dbschema'))
+if (!is_dir(__DIR__.'/generated/dbschema')) {
 	if (!mkdir(__DIR__.'/generated/dbschema') && !is_dir(__DIR__.'/generated/dbschema')) {
 		throw new \RuntimeException(sprintf('Directory "%s" was not created', 'generated/schema'));
 	}
+}
 
-if (!is_dir(__DIR__.'/generated/dbmodel'))
+if (!is_dir(__DIR__.'/generated/dbmodel')) {
 	if (!mkdir(__DIR__.'/generated/dbmodel') && !is_dir(__DIR__.'/generated/dbmodel')) {
 		throw new \RuntimeException(sprintf('Directory "%s" was not created', 'generated/model'));
 	}
+}
 
-if (!is_dir(__DIR__.'/generated/distrib'))
+if (!is_dir(__DIR__.'/generated/distrib')) {
 	if (!mkdir(__DIR__.'/generated/distrib') && !is_dir(__DIR__.'/generated/distrib')) {
 		throw new \RuntimeException(sprintf('Directory "%s" was not created', 'generated/distrib'));
 	}
+}
 
-if (!is_dir(__DIR__.'/generated/controller'))
+if (!is_dir(__DIR__.'/generated/controller')) {
 	if (!mkdir(__DIR__.'/generated/controller') && !is_dir(__DIR__.'/generated/controller')) {
 		throw new \RuntimeException(sprintf('Directory "%s" was not created', 'generated/controller'));
 	}
+}
+
+putImportFile(__DIR__.'/generated/dbschema');
+putImportFile(__DIR__.'/generated/dbmodel');
+putImportFile(__DIR__.'/generated/distrib');
+putImportFile(__DIR__.'/generated/controller');
 
 $tableNames = [];
 $allTables = $database->get("SHOW TABLES;");
@@ -345,4 +354,18 @@ function generateController($database, $table)
 
 	// ...
 	return implode(PHP_EOL, $s);
+}
+
+
+function putImportFile(string $folder) {
+	$importFile = '<?php
+foreach (glob(dirname(__FILE__)."/*.class.php") as $file)
+{
+	if (!strstr($file, "._"))
+	{
+		require_once($file);
+	}
+}';
+	echo "placing import file in ".$folder."/_import.php".PHP_EOL;
+	file_put_contents($folder."/_import.php", $importFile);
 }
