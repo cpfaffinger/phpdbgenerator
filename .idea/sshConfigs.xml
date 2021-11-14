@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="SshConfigs">
+    <configs>
+      <sshConfig host="srv-web-1.pulseone.cloud" id="154a271d-4c10-4edc-bdfa-027e099cbdfb" keyPath="C:\Users\cp\OneDrive\SSH Keys\racknerd_2_2gb-web1_pulseone_at\racknerd_2_2gb.ppk" port="49150" nameFormat="DESCRIPTIVE" username="root" />
+    </configs>
+  </component>
+</project>

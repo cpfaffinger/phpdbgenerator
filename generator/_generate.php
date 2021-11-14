@@ -319,6 +319,7 @@ function generateDistrib($database, $table)
 	$s = [];
 
 	$s[] = '<?php';
+	$s[] = '';
 	$s[] = 'namespace distrib;';
 	$s[] = '';
 	$s[] = 'class ' . strtolower($table) . ' extends \dbmodel\\' . strtolower($table) . "";
