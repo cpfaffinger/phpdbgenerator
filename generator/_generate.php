@@ -39,10 +39,17 @@ if (!is_dir(__DIR__.'/generated/controller')) {
 	}
 }
 
+if (!is_dir(__DIR__.'/generated/dbschemaforge')) {
+	if (!mkdir(__DIR__.'/generated/dbschemaforge') && !is_dir(__DIR__.'/generated/dbschemaforge')) {
+		throw new \RuntimeException(sprintf('Directory "%s" was not created', 'generated/dbschemaforge'));
+	}
+}
+
 putImportFile(__DIR__.'/generated/dbschema');
 putImportFile(__DIR__.'/generated/dbmodel');
 putImportFile(__DIR__.'/generated/distrib');
 putImportFile(__DIR__.'/generated/controller');
+putImportFile(__DIR__.'/generated/dbschemaforge');
 
 $tableNames = [];
 $allTables = $database->get("SHOW TABLES;");
@@ -73,6 +80,12 @@ foreach ($allTables as $table) {
 		if (file_exists($path))
 			unlink($path);
 		file_put_contents($path, generateController($database, $tableName));
+
+		echo "rendering \dbschemaforge\\" . $tableName . PHP_EOL;
+		$path = __DIR__."/generated/dbschemaforge/$tableName.class.php";
+		if (file_exists($path))
+			unlink($path);
+		file_put_contents($path, generateDbSchemaForge($database, $tableName));
 
 	}
 }
@@ -135,6 +148,45 @@ function generateDBSchema($database, $table)
 	foreach ($allFieldsColl as $field) {
 		$s[] = "    public function get" . ucwords($field) . '() {';
 		$s[] = '        return $this->' . $field . ';';
+		$s[] = '    }';
+	}
+
+	$s[] = '';
+	$s[] = '}';
+	// ...
+	return implode(PHP_EOL, $s);
+}
+
+function generateDbSchemaForge($database, $table)
+{
+
+	$fields = $database->get("DESC `" . $table . "`");
+
+	$allFieldsColl = [];
+	foreach ($fields as $f)
+		$allFieldsColl[] = $f['Field'];
+
+	$fieldMapByType = [];
+	foreach ($fields as $field) {
+		$typeFlag = explode("(", $field["Type"])[0];
+		$typeFlag = transposeSqlType($typeFlag);
+		$fieldMapByType[$typeFlag][] = $field["Field"];
+	}
+
+
+	$s = [];
+
+	$s[] = '<?php';
+	$s[] = '';
+	$s[] = 'namespace dbschemaforge;';
+	$s[] = '';
+	$s[] = 'class ' . strtolower($table). ' extends dbschema';
+	$s[] = '{';
+	$s[] = '';
+
+	foreach ($allFieldsColl as $field) {
+		$s[] = "    public function set" . ucwords($field) . '($value) {';
+		$s[] = '        $this->' . $field . ' = $value;';
 		$s[] = '    }';
 	}
 
