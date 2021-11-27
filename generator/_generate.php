@@ -180,7 +180,7 @@ function generateDbSchemaForge($database, $table)
 	$s[] = '';
 	$s[] = 'namespace dbschemaforge;';
 	$s[] = '';
-	$s[] = 'class ' . strtolower($table). ' extends dbschema';
+	$s[] = 'class ' . strtolower($table). ' extends dbschema\\'.strtolower($table);
 	$s[] = '{';
 	$s[] = '';
 
