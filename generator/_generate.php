@@ -240,7 +240,7 @@ function generateDbModel($database, $table)
 
 	if ($hasGuidField) {
 		$s[] = '';
-		$s[] = '        if (is_guid($key)) {';
+		$s[] = '        if (\helper\guid::is_guid($key)) {';
 		$s[] = '            $this->' . $firstFieldName . ' = self::resolveGuidToId($key);';
 		$s[] = '        }';
 	}
