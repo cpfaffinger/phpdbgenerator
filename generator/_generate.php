@@ -297,6 +297,15 @@ function generateDbModel($database, $table)
 	$s[] = '}';
 	$s[] = '';
 
+	$s[] = '    public function setToNull($key): bool {';
+	$s[] = '        if (!$this->isUpdateAllowedKey($key))';
+	$s[] = '            return false;';
+	$s[] = '';
+	$s[] = '        $_q = "UPDATE `' . $table . '` SET `$key` = NULL WHERE guid = \"$this->guid\";";';
+	$s[] = '        return \Database::query($_q);';
+	$s[] = '    }';
+	$s[] = '';
+
 	$s[] = '    public function update($key, $value): bool {';
 	$s[] = '        if (!$this->isUpdateAllowedKey($key))';
 	$s[] = '            return false;';
@@ -392,9 +401,7 @@ function generateController($database, $table)
 
 	$s[] = '<?php';
 	$s[] = '';
-	$s[] = 'namespace controller;';
-	$s[] = '';
-	$s[] = 'class ' . strtolower($table) . '';
+	$s[] = 'class ' . strtolower($table) . '_controller';
 	$s[] = '{';
 	$s[] = '';
 	$s[] = '	public static function getAll(): array';
