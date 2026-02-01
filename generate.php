@@ -609,7 +609,14 @@ class GeneratorPG1
 
 		// spawn
 		$model .= "    public function spawn()\n    {\n";
-		$model .= "        \$_q = \"SELECT * FROM `$table` WHERE `$pk` = :pk LIMIT 1\";\n";
+		// Build list of columns for SELECT
+		$cols = [];
+		foreach ($fields as $f) {
+			$cols[] = "`{$f['Field']}`";
+		}
+		$colStr = implode(', ', $cols);
+
+		$model .= "        \$_q = \"SELECT $colStr FROM `$table` WHERE `$pk` = :pk LIMIT 1\";\n";
 		$model .= "        \$t = Database::getInstance()->getRow(\$_q, ['pk' => \$this->$pk]);\n\n";
 		$model .= "        if (\$t) {\n";
 		foreach ($fields as $f) {
