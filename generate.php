@@ -572,7 +572,7 @@ class GeneratorPG1
 	private function generateApp($className, $table, $fields, $pk)
 	{
 		$app = "<?php\n\nclass $className extends {$className}Model\n{\n";
-		$app .= "    public function delete()\n    {\n";
+		$app .= "    public function delete(): bool\n    {\n";
 		$app .= "        return {$className}Controller::delete(\$this);\n";
 		$app .= "    }\n}\n";
 		file_put_contents(__DIR__ . "/generated/app/$className.class.php", $app);
@@ -603,12 +603,7 @@ class GeneratorPG1
 		$model .= "    }\n\n";
 
 		// resolveGuidToInt method
-		$model .= "    public function resolveGuidToInt(\$guid)\n    {\n";
-		// Assuming there is a column named 'guid' or similar. If not, this might fail or need adjustment.
-		// But the user asked to create this function.
-		// We will try to find a column that looks like a guid or just 'guid'.
-		// If the table doesn't have a guid column, this method might be useless, but we'll generate it as requested.
-		// We'll assume the column name is 'guid'.
+		$model .= "    public function resolveGuidToInt(\$guid): int\n    {\n";
 		$model .= "        \$res = Database::getInstance()->getValue(\"SELECT `$pk` FROM `$table` WHERE `guid` = :guid\", ['guid' => \$guid]);\n";
 		$model .= "        return \$res ? (int)\$res : 0;\n";
 		$model .= "    }\n\n";
@@ -617,20 +612,23 @@ class GeneratorPG1
 		foreach ($fields as $f) {
 			$field = $f['Field'];
 			$methodName = str_replace(' ', '', ucwords(str_replace('_', ' ', $field)));
+			$returnType = $this->transposeSqlType($f['Type']);
+			// Map 'double' to 'float' for PHP return types if needed, but 'float' is standard in PHP 7+
+			if ($returnType === 'double') $returnType = 'float';
 
 			$model .= "    /**\n     * @return " . $this->transposeSqlType($f['Type']) . "\n     */\n";
-			$model .= "    public function get$methodName()\n    {\n";
+			$model .= "    public function get$methodName(): ?$returnType\n    {\n";
 			$model .= "        return \$this->$field;\n";
 			$model .= "    }\n\n";
 
-			$model .= "    public function set$methodName(\$val)\n    {\n";
+			$model .= "    public function set$methodName(\$val): self\n    {\n";
 			$model .= "        \$this->update('$field', \$val);\n";
 			$model .= "        return \$this;\n";
 			$model .= "    }\n\n";
 		}
 
 		// spawn
-		$model .= "    public function spawn()\n    {\n";
+		$model .= "    public function spawn(): bool\n    {\n";
 		// Build list of columns for SELECT
 		$cols = [];
 		foreach ($fields as $f) {
@@ -639,7 +637,6 @@ class GeneratorPG1
 		$colStr = implode(', ', $cols);
 
 		$model .= "        \$_q = \"SELECT $colStr FROM `$table` WHERE `$pk` = :pk LIMIT 1\";\n";
-		$model .= "        \$_q = \"SELECT $colStr FROM `$table` WHERE `$pk` = :pk LIMIT 1\";\n"; // Duplicate line removed in actual write
 		$model .= "        \$t = Database::getInstance()->getRow(\$_q, ['pk' => \$this->$pk]);\n\n";
 		$model .= "        if (\$t) {\n";
 		foreach ($fields as $f) {
@@ -670,7 +667,7 @@ class GeneratorPG1
 		$model .= "    }\n\n";
 
 		// syncToDatabase (was update)
-		$model .= "    public function syncToDatabase()\n    {\n";
+		$model .= "    public function syncToDatabase(): int\n    {\n";
 		$model .= "        \$data = [];\n";
 		foreach ($fields as $f) {
 			if ($f['Field'] === $pk) continue;
@@ -689,7 +686,7 @@ class GeneratorPG1
 		$model .= "    }\n\n";
 
 		// update (was set)
-		$model .= "    public function update(\$key, \$value)\n    {\n";
+		$model .= "    public function update(\$key, \$value): int\n    {\n";
 		$model .= "        \$res = Database::getInstance()->update('$table', [\$key => \$value], ['$pk' => \$this->$pk]);\n\n";
 		$model .= "        if (\$res) {\n";
 		$model .= "            \$this->\$key = \$value;\n";
@@ -706,7 +703,7 @@ class GeneratorPG1
 		$ctrl = "<?php\n\nclass {$className}Controller\n{\n";
 
 		// create (mass assignment)
-		$ctrl .= "    public static function create(\$data)\n    {\n";
+		$ctrl .= "    public static function create(\$data): $className\n    {\n";
 		$ctrl .= "        \$obj = new $className();\n";
 		$ctrl .= "        foreach (\$data as \$k => \$v) {\n";
 		$ctrl .= "            \$setter = 'set' . str_replace(' ', '', ucwords(str_replace('_', ' ', \$k)));\n";
@@ -717,7 +714,7 @@ class GeneratorPG1
 		$ctrl .= "        return \$obj;\n";
 		$ctrl .= "    }\n\n";
 
-		$ctrl .= "    public static function getAll()\n    {\n";
+		$ctrl .= "    public static function getAll(): array\n    {\n";
 		$ctrl .= "        \$res = Database::getInstance()->getAll(\"SELECT `$pk` FROM `$table`\");\n";
 		$ctrl .= "        \$r = [];\n\n";
 		$ctrl .= "        if (\$res) {\n";
@@ -729,7 +726,7 @@ class GeneratorPG1
 		$ctrl .= "    }\n\n";
 
 		// getByField
-		$ctrl .= "    public static function getByField(\$field, \$value)\n    {\n";
+		$ctrl .= "    public static function getByField(\$field, \$value): array\n    {\n";
 		// Note: Using raw SQL here because column name is dynamic, but value is parameterized
 		$ctrl .= "        \$res = Database::getInstance()->getAll(\"SELECT `$pk` FROM `$table` WHERE `\$field` = :val\", ['val' => \$value]);\n";
 		$ctrl .= "        \$r = [];\n\n";
@@ -742,11 +739,11 @@ class GeneratorPG1
 		$ctrl .= "    }\n\n";
 
 		// delete(<class>)
-		$ctrl .= "    public static function delete(\$instance)\n    {\n";
+		$ctrl .= "    public static function delete(\$instance): bool\n    {\n";
 		$ctrl .= "        if (\$instance instanceof $className) {\n";
 		$pkGetter = "get" . str_replace(' ', '', ucwords(str_replace('_', ' ', $pk)));
 		$ctrl .= "            \$id = \$instance->$pkGetter();\n";
-		$ctrl .= "            return Database::getInstance()->deleteFrom('$table', ['$pk' => \$id]);\n";
+		$ctrl .= "            return (bool)Database::getInstance()->deleteFrom('$table', ['$pk' => \$id]);\n";
 		$ctrl .= "        }\n\n";
 		$ctrl .= "        return false;\n";
 		$ctrl .= "    }\n";
