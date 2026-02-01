@@ -565,7 +565,7 @@ class GeneratorPG1
 		$typeFlag = explode('(', $typeFlag)[0];
 		if (in_array($typeFlag, ["varchar", "text", "longtext", "mediumtext", "tinytext", "datetime", "enum", "blob"])) return "string";
 		if (in_array($typeFlag, ["int", "bigint", "tinyint", "smallint"])) return "int";
-		if (in_array($typeFlag, ["decimal", "float", "double"])) return "double";
+		if (in_array($typeFlag, ["decimal", "float", "double"])) return "float"; // Changed from "double" to "float"
 		return "string";
 	}
 
