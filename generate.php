@@ -55,10 +55,10 @@ class TempDatabaseClass
 	{
 		$dsn = null;
 
-		// 1) Try to load configuration from conf/database.ini (preferred)
+		// 1) Try to load configuration from src/conf/database.ini (preferred)
 		$config = [];
-		$projectRoot = dirname(__DIR__, 2);
-		$iniPath = $projectRoot . DIRECTORY_SEPARATOR . 'conf' . DIRECTORY_SEPARATOR . 'database.ini';
+		$projectRoot = dirname(__DIR__, 1);
+		$iniPath = $projectRoot . DIRECTORY_SEPARATOR . 'src' . DIRECTORY_SEPARATOR . 'conf' . DIRECTORY_SEPARATOR . 'database.ini';
 		if (is_readable($iniPath)) {
 			// Support both with and without sections
 			$withSections = @parse_ini_file($iniPath, true, INI_SCANNER_TYPED);
@@ -93,7 +93,7 @@ class TempDatabaseClass
 
 		if ($dsn === null) {
 			if ($host === null || $database === null) {
-				throw new \InvalidArgumentException('Database configuration not found. Provide conf/database.ini or set DB_HOST and DB_NAME env vars (or DB_DSN).');
+				throw new \InvalidArgumentException('Database configuration not found. Provide src/conf/database.ini or set DB_HOST and DB_NAME env vars (or DB_DSN).');
 			}
 			// Build DSN from parts (driver/charset/port from INI or env, with defaults)
 			$driver = ($config['driver'] ?? getenv('DB_DRIVER')) ?: 'mysql';
@@ -627,6 +627,11 @@ class GeneratorPG1
 			$model .= "    }\n\n";
 		}
 
+		// isValid
+		$model .= "    public function isValid(): bool\n    {\n";
+		$model .= "        return \$this->$pk !== null && \$this->$pk > 0;\n";
+		$model .= "    }\n\n";
+
 		// spawn
 		$model .= "    public function spawn(): bool\n    {\n";
 		// Build list of columns for SELECT
@@ -712,6 +717,18 @@ class GeneratorPG1
 		$ctrl .= "            }\n";
 		$ctrl .= "        }\n";
 		$ctrl .= "        return \$obj;\n";
+		$ctrl .= "    }\n\n";
+
+		// getById
+		$ctrl .= "    public static function getById(\$id): ?$className\n    {\n";
+		$ctrl .= "        \$obj = new $className(\$id);\n";
+		$ctrl .= "        return \$obj->isValid() ? \$obj : null;\n";
+		$ctrl .= "    }\n\n";
+
+		// save
+		$ctrl .= "    public static function save(\$instance): $className\n    {\n";
+		$ctrl .= "        \$instance->save();\n";
+		$ctrl .= "        return \$instance;\n";
 		$ctrl .= "    }\n\n";
 
 		$ctrl .= "    public static function getAll(): array\n    {\n";
