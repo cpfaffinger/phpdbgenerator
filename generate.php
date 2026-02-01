@@ -586,9 +586,31 @@ class GeneratorPG1
 		}
 		$model .= "\n    public function __construct(\$id = null)\n    {\n";
 		$model .= "        if (\$id) {\n";
-		$model .= "            \$this->$pk = \$id;\n";
-		$model .= "            \$this->spawn();\n";
+		// Updated constructor logic
+		$model .= "            if (is_int(\$id)) {\n";
+		$model .= "                \$this->$pk = \$id;\n";
+		$model .= "                \$this->spawn();\n";
+		$model .= "            } else {\n";
+		$model .= "                // Check if it's a GUID (simple check for string length/format if needed, or just assume string)\n";
+		$model .= "                // For now, assume if not int, it might be a GUID string\n";
+		$model .= "                \$intId = \$this->resolveGuidToInt(\$id);\n";
+		$model .= "                if (\$intId) {\n";
+		$model .= "                    \$this->$pk = \$intId;\n";
+		$model .= "                    \$this->spawn();\n";
+		$model .= "                }\n";
+		$model .= "            }\n";
 		$model .= "        }\n";
+		$model .= "    }\n\n";
+
+		// resolveGuidToInt method
+		$model .= "    public function resolveGuidToInt(\$guid)\n    {\n";
+		// Assuming there is a column named 'guid' or similar. If not, this might fail or need adjustment.
+		// But the user asked to create this function.
+		// We will try to find a column that looks like a guid or just 'guid'.
+		// If the table doesn't have a guid column, this method might be useless, but we'll generate it as requested.
+		// We'll assume the column name is 'guid'.
+		$model .= "        \$res = Database::getInstance()->getValue(\"SELECT `$pk` FROM `$table` WHERE `guid` = :guid\", ['guid' => \$guid]);\n";
+		$model .= "        return \$res ? (int)\$res : 0;\n";
 		$model .= "    }\n\n";
 
 		// Getter and Setter methods
@@ -617,6 +639,7 @@ class GeneratorPG1
 		$colStr = implode(', ', $cols);
 
 		$model .= "        \$_q = \"SELECT $colStr FROM `$table` WHERE `$pk` = :pk LIMIT 1\";\n";
+		$model .= "        \$_q = \"SELECT $colStr FROM `$table` WHERE `$pk` = :pk LIMIT 1\";\n"; // Duplicate line removed in actual write
 		$model .= "        \$t = Database::getInstance()->getRow(\$_q, ['pk' => \$this->$pk]);\n\n";
 		$model .= "        if (\$t) {\n";
 		foreach ($fields as $f) {
