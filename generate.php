@@ -78,7 +78,7 @@ class Database
 	}
 }
 
-class Generator
+class GeneratorPG1
 {
 	private $db;
 
@@ -89,9 +89,14 @@ class Generator
 
 	public function generate()
 	{
+		$baseDir = __DIR__ . '/generated';
+		$this->deleteDirectory($baseDir);
+
+		if (!file_exists($baseDir)) mkdir($baseDir, 0777, true);
+
 		$folders = ['controller', 'schema', 'app'];
 		foreach ($folders as $f) {
-			if (!file_exists($f)) mkdir($f, 0777, true);
+			if (!file_exists("$baseDir/$f")) mkdir("$baseDir/$f", 0777, true);
 		}
 
 		$tables = $this->db->get("SHOW TABLES");
@@ -107,6 +112,34 @@ class Generator
 			$this->generateModel($className, $table, $fields, $pk);
 			$this->generateController($className, $table, $fields, $pk);
 		}
+
+		foreach ($folders as $f) {
+			$this->generateIncludeFile("$baseDir/$f");
+		}
+	}
+
+	private function deleteDirectory($dir)
+	{
+		if (!file_exists($dir)) return true;
+		if (!is_dir($dir)) return unlink($dir);
+		foreach (scandir($dir) as $item) {
+			if ($item == '.' || $item == '..') continue;
+			if (!$this->deleteDirectory($dir . DIRECTORY_SEPARATOR . $item)) return false;
+		}
+		return rmdir($dir);
+	}
+
+	private function generateIncludeFile($dir)
+	{
+		$files = scandir($dir);
+		$content = "<?php\n\n";
+		foreach ($files as $file) {
+			if ($file === '.' || $file === '..' || $file === '_include.php') continue;
+			if (pathinfo($file, PATHINFO_EXTENSION) === 'php') {
+				$content .= "require_once __DIR__ . '/$file';\n";
+			}
+		}
+		file_put_contents("$dir/_include.php", $content);
 	}
 
 	private function transposeSqlType($typeFlag)
@@ -124,7 +157,7 @@ class Generator
 		$app .= "    public function delete()\n    {\n";
 		$app .= "        return {$className}Controller::delete(\$this);\n";
 		$app .= "    }\n}\n";
-		file_put_contents("app/$className.class.php", $app);
+		file_put_contents(__DIR__ . "/generated/app/$className.class.php", $app);
 	}
 
 	private function generateModel($className, $table, $fields, $pk)
@@ -195,7 +228,7 @@ class Generator
 		$model .= "        return \$res;\n    }\n";
 
 		$model .= "}\n";
-		file_put_contents("schema/{$className}Model.class.php", $model);
+		file_put_contents(__DIR__ . "/generated/schema/{$className}Model.class.php", $model);
 	}
 
 	private function generateController($className, $table, $fields, $pk)
@@ -235,12 +268,12 @@ class Generator
 		$ctrl .= "            return Database::getInstance()->query(\$_q);\n";
 		$ctrl .= "        }\n        return false;\n    }\n";
 		$ctrl .= "}\n";
-		file_put_contents("controller/{$className}Controller.class.php", $ctrl);
+		file_put_contents(__DIR__ . "/generated/controller/{$className}Controller.class.php", $ctrl);
 	}
 }
 
 $db = new Database($envHost, $envUser, $envPass, $envName);
-$generator = new Generator($db);
+$generator = new GeneratorPG1($db);
 $generator->generate();
 
 echo "Done.\n";
